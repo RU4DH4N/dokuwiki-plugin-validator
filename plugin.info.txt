@@ -1,5 +1,5 @@
 base   turnstile
 author Ruadhan
-date   2025-06-17
+date   2025-06-18
 name   Turnstile
 desc   uses turnstile to authenticate user registration/login
