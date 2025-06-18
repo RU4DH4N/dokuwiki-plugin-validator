@@ -122,7 +122,6 @@ class action_plugin_turnstile extends ActionPlugin
                 $event->stopPropagation();
                 break;
         }
-        return;
     }
 
     public function handleRegister(Event $event, $param)
