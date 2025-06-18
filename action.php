@@ -25,15 +25,6 @@ class action_plugin_turnstile extends ActionPlugin
         $html = '<div style="margin-top: 10px; margin-bottom: 10px;">';
         $html .= '<div class="cf-turnstile" data-sitekey="' . htmlspecialchars($siteKey) . '" data-callback="turnstileCallback"></div>';
         $html .= '</div>';
-        $html .= '<script>
-                    function turnstileCallback(token) {
-                        var hiddenInput = document.getElementById("cf-turnstile-response");
-
-                        if (hiddenInput) {
-                            hiddenInput.value = token;
-                        }
-                    }
-                </script>';
         return $html;
     }
 
@@ -107,7 +98,7 @@ class action_plugin_turnstile extends ActionPlugin
 
     public function handleRegister(Event $event, $param)
     {
-        if (!$event->data['type'] === 'create') {
+        if ($event->data['type'] !== 'create') {
             return;
         }
 
