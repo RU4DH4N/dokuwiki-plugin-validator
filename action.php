@@ -6,6 +6,9 @@ use dokuwiki\Extension\EventHandler;
 
 class action_plugin_turnstile extends ActionPlugin
 {
+    private const TURNSTILE_CHALLENGE = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+    private const TURNSTILE_SITEVERIFY = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
+
     public function register(EventHandler $controller)
     {
         $controller->register_hook('TPL_METAHEADER_OUTPUT', 'BEFORE', $this, 'injectScript');
@@ -23,7 +26,7 @@ class action_plugin_turnstile extends ActionPlugin
         $siteKey = $this->getConf('sitekey');
 
         $html = '<div style="margin-top: 10px; margin-bottom: 10px;">';
-        $html .= '<div class="cf-turnstile" data-sitekey="' . htmlspecialchars($siteKey) . '" data-callback="turnstileCallback"></div>';
+        $html .= '<div class="cf-turnstile" data-sitekey="' . htmlspecialchars($siteKey) . '"></div>';
         $html .= '</div>';
         return $html;
     }
@@ -35,7 +38,7 @@ class action_plugin_turnstile extends ActionPlugin
         if ($ACT === 'register' || $ACT === 'login') {
             $event->data['script'][] = [
                 'type'    => 'text/javascript',
-                'src'     => 'https://challenges.cloudflare.com/turnstile/v0/api.js',
+                'src'     => self::TURNSTILE_CHALLENGE,
                 'async'   => 'async',
                 'defer'   => 'defer',
                 '_data'   => ''
@@ -82,7 +85,7 @@ class action_plugin_turnstile extends ActionPlugin
         ];
 
         $context = stream_context_create($options);
-        $result = @file_get_contents('https://challenges.cloudflare.com/turnstile/v0/siteverify', false, $context);
+        $result = @file_get_contents(self::TURNSTILE_SITEVERIFY, false, $context);
 
         if ($result === false) return null;
 
@@ -92,8 +95,34 @@ class action_plugin_turnstile extends ActionPlugin
         return $outcome;
     }
 
-    private function validateResponse($response): bool {
-        return isset($response['success']) && $response['success'] === true;
+    private function checkToken(Event $event) {
+
+        $public = $this->getConf('sitekey');
+        $private = $this->getConf('secretkey');
+        if (empty($public) || empty($private)) return;
+
+        $response = $this->generateResponse($event);
+
+        if (!is_null($response) && isset($response['success']) && $response['success'] === true) {
+            return;
+        }
+
+        // add msg here
+
+        global $INPUT;
+        global $ACT;
+        
+        switch($ACT) {
+            case 'register':
+                $INPUT->post->set('save', false);
+                break;
+            case 'login':
+                $event->result = false;
+                $event->preventDefault();
+                $event->stopPropagation();
+                break;
+        }
+        return;
     }
 
     public function handleRegister(Event $event, $param)
@@ -102,32 +131,14 @@ class action_plugin_turnstile extends ActionPlugin
             return;
         }
 
-        $public = $this->getConf('sitekey');
-        $private = $this->getConf('secretkey');
-        if (empty($public) || empty($private)) return;
-
-        global $INPUT;
-
-        $response = $this->generateResponse($event);
-        if(is_null($response) || !$this->validateResponse($response)) {
-            $INPUT->post->set('save', false);
-        }
+        $this->checkToken($event);
     }
 
     public function handleLogin(Event $event, $param)
     {
-        $public = $this->getConf('sitekey');
-        $private = $this->getConf('secretkey');
-        if (empty($public) || empty($private)) return;
-
         global $INPUT;
         if (!$INPUT->bool('u')) return;
-        $response = $this->generateResponse($event);
 
-        if (is_null($response) || !$this->validateResponse($response)) {
-            $event->result = false;
-            $event->preventDefault();
-            $event->stopPropagation();
-        }
+        $this->checkToken($event);
     }
 }
