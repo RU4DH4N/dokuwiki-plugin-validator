@@ -52,16 +52,13 @@ class helper_plugin_validator extends Plugin
         $curl = curl_init();
 
         curl_setopt_array($curl, [
-            CURLOPT_URL            => $url,
+            CURLOPT_URL => $url,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => http_build_query($data),
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST           => true,
-            CURLOPT_POSTFIELDS     => http_build_query($data),
-            CURLOPT_TIMEOUT        => 5,
-            CURLOPT_CONNECTTIMEOUT => 2,
             CURLOPT_SSL_VERIFYPEER => true,
-            CURLOPT_HTTPHEADER     => [
-                'Content-Type: application/x-www-form-urlencoded'
-            ]
+            CURLOPT_TIMEOUT => 5,
+            CURLOPT_CONNECTTIMEOUT => 10,
         ]);
 
         return $curl;
