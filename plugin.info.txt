@@ -1,5 +1,5 @@
-base   turnstile
+base   validator
 author Ruadhan
-date   2025-06-18
-name   Turnstile
-desc   uses turnstile to authenticate user registration/login
+date   2025-06-19
+name   Validator
+desc   Validates Login/Registration Attempts against Anti-Bot Services
