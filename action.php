@@ -34,7 +34,7 @@ class action_plugin_validator extends ActionPlugin
         $controller->register_hook('TPL_METAHEADER_OUTPUT', 'BEFORE', $this, 'injectScript');
         $controller->register_hook('FORM_REGISTER_OUTPUT', 'BEFORE', $this, 'handleFormOutput');
         $controller->register_hook('FORM_LOGIN_OUTPUT', 'BEFORE', $this, 'handleFormOutput');
-        $controller->register_hook('AUTH_USER_CHANGE', 'BEFORE', $this, 'handleRegister');
+        $controller->register_hook('ACTION_ACT_PREPROCESS', 'BEFORE', $this, 'handleRegister');
         $controller->register_hook('AUTH_LOGIN_CHECK', 'BEFORE', $this, 'handleLogin');
     }
 
@@ -131,8 +131,8 @@ class action_plugin_validator extends ActionPlugin
 
         global $INPUT;
         global $ACT;
-        
-        switch($ACT) {
+
+        switch ($ACT) {
             case 'register':
                 $INPUT->post->set('save', false);
                 break;
@@ -142,14 +142,13 @@ class action_plugin_validator extends ActionPlugin
                 $event->stopPropagation();
                 break;
         }
-        return;
     }
 
     public function handleRegister(Event $event, $param)
     {
-        if ($event->data['type'] !== 'create') {
-            return;
-        }
+        global $INPUT;
+        $act = act_clean($event->data);
+        if ($act !== 'register' || !$INPUT->bool('save')) return;
 
         $this->checkToken($event);
     }
