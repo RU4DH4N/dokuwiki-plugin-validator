@@ -1,4 +1,7 @@
 <?php
 
-$conf['sitekey'] = '';
-$conf['secretkey'] = '';
+$conf['cf-sitekey'] = '';
+$conf['cf-secretkey'] = '';
+$conf['g-sitekey'] = '';
+$conf['g-secretkey'] = '';
+$conf['mode'] = 'cloudflare';
