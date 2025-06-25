@@ -30,7 +30,7 @@ class helper_plugin_validator extends Plugin
         return $result;
     }
 
-    public function getTurnstile($url, $data): CurlHandle
+    public function getTurnstile($url, $data)
     {
         $curl = curl_init();
 
@@ -47,7 +47,7 @@ class helper_plugin_validator extends Plugin
         return $curl;
     }
 
-    public function getCaptcha($url, $data): CurlHandle
+    public function getCaptcha($url, $data)
     {
         $curl = curl_init();
 
