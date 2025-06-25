@@ -97,6 +97,8 @@ class action_plugin_validator extends ActionPlugin
         $helper = plugin_load('helper', 'validator');
         $curl = $helper->$function(self::CAPTCHA_PROVIDERS[$mode]['verify_endpoint'], $data);
 
+        if ($curl === false) return null;
+
         $responseBody = curl_exec($curl);
 
         if (curl_errno($curl) || curl_getinfo($curl, CURLINFO_HTTP_CODE) !== 200) {
