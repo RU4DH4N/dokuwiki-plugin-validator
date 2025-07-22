@@ -83,6 +83,14 @@ class helper_plugin_validator extends Plugin
         return $result;
     }
 
+    // I need to implement this properly
+    public function isEnabled():bool {
+        $provider = $this->getProvider();
+        $sitekey = $this->getConf($provider['sitekey_name']);
+        $secretkey = $this->getConf($provider['secretkey_name']);
+        return ($sitekey !== false && $sitekey !== '' && $secretkey !== false && $secretkey !== '');
+    }
+
     public function getProvider() {
         $provider = $this->getConf('provider') ?: self::DEFAULT;
         return self::CAPTCHA_PROVIDERS[$provider];
