@@ -1,7 +1,6 @@
 <?php
 
 use dokuwiki\Extension\Plugin;
-use dokuwiki\Logger;
 
 class helper_plugin_validator extends Plugin
 {
@@ -21,7 +20,6 @@ class helper_plugin_validator extends Plugin
             'secretkey_name'    => 'cf-secretkey',
             'class_name'        => 'cf-turnstile',
             'response_name'     => 'cf-turnstile-response',
-            'function_name'     => 'getTurnstile',
         ],
         'google' => [
             'challenge_script'  => 'https://www.google.com/recaptcha/api.js',
@@ -30,7 +28,6 @@ class helper_plugin_validator extends Plugin
             'secretkey_name'    => 'g-secretkey',
             'class_name'        => 'g-recaptcha',
             'response_name'     => 'g-recaptcha-response',
-            'function_name'     => 'getCaptcha',
         ],
     ];
 
@@ -41,17 +38,8 @@ class helper_plugin_validator extends Plugin
         $result = [];
 
         $result[] = [
-            'name' => 'getTurnstile',
-            'desc' => 'returns the curl handle for turnstile verification',
-            'params' => [
-                'url'   => 'string',
-                'data'  => 'array'
-            ],
-            'return' => ['curl' => 'CurlHandle|resource|false'],
-        ];
-        $result[] = [
-            'name' => 'getCaptcha',
-            'desc' => 'returns the curl handle for captcha verification',
+            'name' => 'getCurl',
+            'desc' => 'returns the curl handle for verification',
             'params' => [
                 'url'   => 'string',
                 'data'  => 'array'
@@ -65,30 +53,39 @@ class helper_plugin_validator extends Plugin
             'params' => [],
             'return' => ['providerConfig' => 'array'],
         ];
+
         $result[] = [
             'name' => 'getHTML',
             'desc' => 'Returns the HTML markup for displaying the CAPTCHA challenge.',
             'params' => [],
             'return' => ['html' => 'string'],
         ];
+
         $result[] = [
             'name' => 'check',
             'desc' => 'Performs the CAPTCHA verification check.',
-            'params' => [
-                'msg' => 'bool (optional, default: true) - Whether to log debug messages.'
-            ],
+            'params' => [],
             'return' => ['isValid' => 'bool'],
         ];
 
         return $result;
     }
 
-    // I need to implement this properly
-    public function isEnabled():bool {
+    public function isEnabled(string $type = 'third-party'): bool {
+        $enabled = $this->getConf('enabled');
+
+        if (!$enabled) return false;
+
+        $allowed = $this->getConf($type);
+
+        if (!$allowed) return false;
+
+        // check a valid site + secret
         $provider = $this->getProvider();
-        $sitekey = $this->getConf($provider['sitekey_name']);
-        $secretkey = $this->getConf($provider['secretkey_name']);
-        return ($sitekey !== false && $sitekey !== '' && $secretkey !== false && $secretkey !== '');
+        $sitekey = $this->getConf($provider['sitekey_name']) ?? '';
+        $secretkey = $this->getConf($provider['secretkey_name']) ?? '';
+
+        return !empty($sitekey) && !empty($secretkey);
     }
 
     public function getProvider() {
@@ -129,42 +126,39 @@ class helper_plugin_validator extends Plugin
 
     public function check($msg = true): bool
     {
-        $provider = $this->getProvider();
-        
-        $sitekey = $this->getConf($provider['sitekey_name']);
-        $secretkey = $this->getConf($provider['secretkey_name']);
-
-        if (empty($sitekey) || empty($secretkey)) {
-            // TODO: use lang
-            Logger::debug('validator not configured correctly, please set sitekey / secretkey');
-            return true; // this has to return true even if no checks are done. 
-        }
-
         global $INPUT;
 
+        $provider = $this->getProvider();
+        $secretkey = $this->getConf($provider['secretkey_name']) ?? '';
         $response = $INPUT->post->str($provider['response_name']);
-        if (empty($response)) return false;
+
+        if (empty($secretkey) || empty($response)) return false;
 
         $data = [
             'secret' => $secretkey,
             'response' => $response,
         ];
 
-        $ip = $INPUT->server->str('REMOTE_ADDR');
-        // probably unnecessary
-        if (!empty($ip)) $data['remoteip'] = $ip;
-
-        $function = $provider['function_name'];
         $verify_endpoint = $provider['verify_endpoint'];
 
-        if (empty($function) || empty($verify_endpoint)) return false;
+        if (empty($verify_endpoint)) return false;
 
-        $curl = $this->$function($verify_endpoint, $data);
+        $curl = $this->getCurl($verify_endpoint, $data);
+
         return $this->processResponse($curl);
     }
 
-    public function getTurnstile($url, $data)
+    public function getCurl($url, $data)
     {
+        $provider = $this->getConf('provider') ?: self::DEFAULT;
+
+        switch ($provider)
+        {
+            case 'google':
+                $data = http_build_query($data);
+                break;
+        }
+
         $curl = curl_init();
 
         curl_setopt_array($curl, [
@@ -175,23 +169,6 @@ class helper_plugin_validator extends Plugin
             CURLOPT_CONNECTTIMEOUT => 5,
             CURLOPT_TIMEOUT        => 10,
             CURLOPT_SSL_VERIFYPEER => true,
-        ]);
-
-        return $curl;
-    }
-
-    public function getCaptcha($url, $data)
-    {
-        $curl = curl_init();
-
-        curl_setopt_array($curl, [
-            CURLOPT_URL => $url,
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => http_build_query($data),
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_SSL_VERIFYPEER => true,
-            CURLOPT_TIMEOUT => 5,
-            CURLOPT_CONNECTTIMEOUT => 10,
         ]);
 
         return $curl;
