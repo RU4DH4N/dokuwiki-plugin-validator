@@ -10,3 +10,10 @@ $meta['provider'] = array(
         'google',
     ),
 );
+$meta['enabled'] = array('onoff');
+
+$meta['login'] = array('onoff');
+$meta['register'] = array('onoff');
+$meta['edit-form'] = array('onoff');
+$meta['reset-password'] = array('onoff');
+$meta['third-party'] = array('onoff');
